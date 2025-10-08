@@ -91,7 +91,7 @@ impl Default for SemanticSearchConfig {
             timeout: 30000, // 30 seconds
             base_dir: get_default_base_dir(),
             max_files: 10000, // Default limit of 10000 files
-            hosted_models_base_url: "https://desktop-release.q.us-east-1.amazonaws.com/models".to_string(),
+            hosted_models_base_url: "https://bedrock-runtime.ap-southeast-2.amazonaws.com".to_string(),
             embedding_type: EmbeddingType::default(),
         }
     }
