@@ -439,6 +439,32 @@ dependencies = [
 ]
 
 [[package]]
+name = "aws-sdk-cloudwatch"
+version = "1.88.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "89321bd133fc9240c4b6a0c71d7e134b6b7e522edae4fe6be9e48fc7f30a6713"
+dependencies = [
+ "aws-credential-types",
+ "aws-runtime",
+ "aws-smithy-async",
+ "aws-smithy-compression",
+ "aws-smithy-http 0.62.3",
+ "aws-smithy-json",
+ "aws-smithy-query",
+ "aws-smithy-runtime",
+ "aws-smithy-runtime-api",
+ "aws-smithy-types",
+ "aws-smithy-xml",
+ "aws-types",
+ "fastrand",
+ "flate2",
+ "http 0.2.12",
+ "http-body 0.4.6",
+ "regex-lite",
+ "tracing",
+]
+
+[[package]]
 name = "aws-sdk-cognitoidentity"
 version = "1.80.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -580,6 +606,23 @@ dependencies = [
  "futures-util",
  "pin-project-lite",
  "tokio",
+]
+
+[[package]]
+name = "aws-smithy-compression"
+version = "0.0.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ceb9b25cf3a8b10ae5c3cf6490488c092871b120a01256af387c51c2eeace313"
+dependencies = [
+ "aws-smithy-runtime-api",
+ "aws-smithy-types",
+ "bytes",
+ "flate2",
+ "futures-util",
+ "http 0.2.12",
+ "http-body 0.4.6",
+ "pin-project-lite",
+ "tracing",
 ]
 
 [[package]]
@@ -1273,6 +1316,7 @@ dependencies = [
  "aws-config",
  "aws-credential-types",
  "aws-runtime",
+ "aws-sdk-cloudwatch",
  "aws-sdk-cognitoidentity",
  "aws-sdk-comprehend",
  "aws-sdk-ssooidc",
