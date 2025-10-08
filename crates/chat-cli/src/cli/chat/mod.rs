@@ -13,6 +13,7 @@ mod prompt;
 mod prompt_parser;
 pub mod server_messenger;
 use crate::cli::chat::checkpoint::CHECKPOINT_MESSAGE_MAX_LENGTH;
+use crate::pii_detector::PiiDetector;
 use crate::constants::ui_text::{
     LIMIT_REACHED_TEXT,
     POPULAR_SHORTCUTS,
@@ -1916,6 +1917,25 @@ impl ChatSession {
         user_input = sanitize_unicode_tags(&user_input);
         let input = user_input.trim();
 
+        // PII Detection for user input
+        if let Ok(pii_detector) = PiiDetector::new().await {
+            if let Ok(has_pii) = pii_detector.check_and_warn(input, "user input").await {
+                if has_pii {
+                    // Ask user if they want to continue
+                    queue!(self.stderr, style::Print("Do you want to continue? (y/N): "))?;
+                    self.stderr.flush()?;
+                    
+                    if let Some(response) = self.read_user_input("", false) {
+                        if !response.trim().to_lowercase().starts_with('y') {
+                            return Ok(ChatState::PromptUser { skip_printing_tools: false });
+                        }
+                    } else {
+                        return Ok(ChatState::Exit);
+                    }
+                }
+            }
+        }
+
         // handle image path
         if let Some(chat_state) = does_input_reference_file(input) {
             return Ok(chat_state);
@@ -2679,6 +2699,12 @@ impl ChatSession {
                             if message.content() == RESPONSE_TIMEOUT_CONTENT {
                                 error!(?request_id, ?message, "Encountered an unexpected model response");
                             }
+                            
+                            // PII Detection for AI response
+                            if let Ok(pii_detector) = PiiDetector::new().await {
+                                let _ = pii_detector.check_and_warn(message.content(), "AI response").await;
+                            }
+                            
                             self.conversation.push_assistant_message(os, message, Some(rm.clone()));
                             self.user_turn_request_metadata.push(rm);
                             ended = true;

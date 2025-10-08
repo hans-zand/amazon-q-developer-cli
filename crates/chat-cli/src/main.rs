@@ -7,6 +7,7 @@ mod database;
 mod logging;
 mod mcp_client;
 mod os;
+pub mod pii_detector;
 mod request;
 mod telemetry;
 mod util;

@@ -461,6 +461,28 @@ dependencies = [
 ]
 
 [[package]]
+name = "aws-sdk-comprehend"
+version = "1.82.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8c3d60aee86aed101a63ad9809be6327d414f3c3bc108ad6ed2e2e07cf4adb2f"
+dependencies = [
+ "aws-credential-types",
+ "aws-runtime",
+ "aws-smithy-async",
+ "aws-smithy-http 0.62.3",
+ "aws-smithy-json",
+ "aws-smithy-runtime",
+ "aws-smithy-runtime-api",
+ "aws-smithy-types",
+ "aws-types",
+ "bytes",
+ "fastrand",
+ "http 0.2.12",
+ "regex-lite",
+ "tracing",
+]
+
+[[package]]
 name = "aws-sdk-sso"
 version = "1.79.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1252,6 +1274,7 @@ dependencies = [
  "aws-credential-types",
  "aws-runtime",
  "aws-sdk-cognitoidentity",
+ "aws-sdk-comprehend",
  "aws-sdk-ssooidc",
  "aws-smithy-async",
  "aws-smithy-runtime-api",
