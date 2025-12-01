@@ -1915,29 +1915,31 @@ impl ChatSession {
     async fn handle_input(&mut self, os: &mut Os, mut user_input: String) -> Result<ChatState, ChatError> {
         queue!(self.stderr, style::Print('\n'))?;
         user_input = sanitize_unicode_tags(&user_input);
-        let input = user_input.trim();
+        let mut input = user_input.trim().to_string();
 
         // PII Detection for user input
         if let Ok(pii_detector) = PiiDetector::new().await {
-            if let Ok(has_pii) = pii_detector.check_and_warn(input, "user input").await {
+            if let Ok(has_pii) = pii_detector.check_and_warn(&input, "user input").await {
                 if has_pii {
                     // Ask user if they want to continue
-                    queue!(self.stderr, style::Print("Do you want to continue? (y/N): "))?;
-                    self.stderr.flush()?;
-                    
-                    if let Some(response) = self.read_user_input("", false) {
-                        if !response.trim().to_lowercase().starts_with('y') {
-                            return Ok(ChatState::PromptUser { skip_printing_tools: false });
+                    match self.input_source.read_line(Some("Do you want to continue? (y/N): ")) {
+                        Ok(Some(response)) => {
+                            if !response.trim().to_lowercase().starts_with('y') {
+                                return Ok(ChatState::PromptUser { skip_printing_tools: false });
+                            }
+                            // Redact PII from user input
+                            if let Ok(redacted_input) = pii_detector.redact_pii(&input).await {
+                                input = redacted_input;
+                            }
                         }
-                    } else {
-                        return Ok(ChatState::Exit);
+                        _ => return Ok(ChatState::Exit),
                     }
                 }
             }
         }
 
         // handle image path
-        if let Some(chat_state) = does_input_reference_file(input) {
+        if let Some(chat_state) = does_input_reference_file(&input) {
             return Ok(chat_state);
         }
         if let Some(mut args) = input.strip_prefix("/").and_then(shlex::split) {
@@ -2098,9 +2100,9 @@ impl ChatSession {
 
             // Check for a pending tool approval
             if let Some(index) = self.pending_tool_index {
-                let is_trust = ["t", "T"].contains(&input);
+                let is_trust = ["t", "T"].contains(&input.as_str());
                 let tool_use = &mut self.tool_uses[index];
-                if ["y", "Y"].contains(&input) || is_trust {
+                if ["y", "Y"].contains(&input.as_str()) || is_trust {
                     if is_trust {
                         let formatted_tool_name = self
                             .conversation
@@ -2151,7 +2153,7 @@ impl ChatSession {
                 };
                 self.conversation.abandon_tool_use(&self.tool_uses, user_input);
             } else {
-                self.conversation.set_next_user_message(user_input).await;
+                self.conversation.set_next_user_message(input).await;
             }
 
             self.reset_user_turn();

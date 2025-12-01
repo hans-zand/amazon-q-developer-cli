@@ -1,5 +1,4 @@
 use aws_sdk_comprehend::{Client as ComprehendClient, types::LanguageCode};
-use aws_sdk_cloudwatch::{Client as CloudWatchClient, types::{MetricDatum, Dimension}};
 use aws_config::BehaviorVersion;
 
 #[derive(Debug, Clone)]
@@ -13,7 +12,6 @@ pub struct PiiMatch {
 
 pub struct PiiDetector {
     client: ComprehendClient,
-    cloudwatch: CloudWatchClient,
 }
 
 impl PiiDetector {
@@ -23,32 +21,8 @@ impl PiiDetector {
             .load()
             .await;
         let client = ComprehendClient::new(&config);
-        let cloudwatch = CloudWatchClient::new(&config);
         
-        Ok(Self { client, cloudwatch })
-    }
-
-    async fn send_pii_metric(&self, context: &str, pii_count: i32) -> Result<(), Box<dyn std::error::Error>> {
-        let dimension = Dimension::builder()
-            .name("Context")
-            .value(context)
-            .build();
-
-        let metric = MetricDatum::builder()
-            .metric_name("PIIDetected")
-            .value(pii_count as f64)
-            .unit(aws_sdk_cloudwatch::types::StandardUnit::Count)
-            .dimensions(dimension)
-            .build();
-
-        self.cloudwatch
-            .put_metric_data()
-            .namespace("QCli/PII")
-            .metric_data(metric)
-            .send()
-            .await?;
-
-        Ok(())
+        Ok(Self { client })
     }
 
     pub async fn detect_pii(&self, text: &str) -> Result<Vec<PiiMatch>, Box<dyn std::error::Error>> {
@@ -99,8 +73,18 @@ impl PiiDetector {
         
         // Process matches in reverse order to maintain correct indices
         for pii_match in matches.iter().rev() {
-            let redacted = format!("[REDACTED_{}]", pii_match.pii_type);
-            result.replace_range(pii_match.start..pii_match.end, &redacted);
+            let redacted = match pii_match.pii_type.as_str() {
+                "Name" => "<name>",
+                "Email" => "<email>",
+                "Phone" => "<phone>",
+                "Address" => "<address>",
+                "CreditCardNumber" => "<credit_card>",
+                "SsnUs" => "<ssn>",
+                "AwsAccessKey" => "<aws_key>",
+                "AwsSecretKey" => "<aws_secret>",
+                _ => "<redacted>",
+            };
+            result.replace_range(pii_match.start..pii_match.end, redacted);
         }
         
         Ok(result)
@@ -111,9 +95,6 @@ impl PiiDetector {
         let matches = self.detect_pii(text).await?;
         
         if !matches.is_empty() {
-            // Send CloudWatch metric
-            let _ = self.send_pii_metric(context, matches.len() as i32).await;
-            
             eprintln!("⚠️  PII detected in {}: {} entities found", context, matches.len());
             for pii_match in &matches {
                 eprintln!("   - {}: {} (confidence: {:.2})", 
@@ -123,7 +104,7 @@ impl PiiDetector {
                 );
             }
             eprintln!("   Consider removing sensitive information before proceeding.");
-            eprintln!("📊 PII detection event sent to CloudWatch");
+            eprintln!("📊 PII detection event can be send to CloudWatch");
             return Ok(true);
         } else {
             eprintln!("✅ No PII detected in {}", context);
